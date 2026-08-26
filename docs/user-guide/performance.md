@@ -159,7 +159,7 @@ def timed_write(write_empty_chunks):
     data = np.random.randint(0, 255, shape)
     dtype = 'uint8'
     arr = zarr.create_array(
-        f'data/example-{write_empty_chunks}.zarr',
+        store={},
         shape=shape,
         chunks=chunks,
         dtype=dtype,
@@ -324,7 +324,7 @@ E.g., pickle/unpickle a local store array:
 ```python exec="true" session="performance" source="above" result="ansi"
 import pickle
 data = np.arange(100000)
-z1 = zarr.create_array(store='data/perf-example-2.zarr', shape=data.shape, chunks=data.shape, dtype=data.dtype)
+z1 = zarr.create_array(store={}, shape=data.shape, chunks=data.shape, dtype=data.dtype)
 z1[:] = data
 s = pickle.dumps(z1)
 z2 = pickle.loads(s)

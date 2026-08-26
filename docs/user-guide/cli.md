@@ -62,9 +62,9 @@ To open the array/group using the new metadata use:
 import zarr
 
 # create a small array to open (stands in for the migrated store)
-zarr.create_array("data/cli-demo.zarr", shape=(4, 4), chunks=(2, 2), dtype="i4", overwrite=True)
+zarr.create_array(store={}, shape=(4, 4), chunks=(2, 2), dtype="i4")
 
-zarr_with_v3_metadata = zarr.open("data/cli-demo.zarr", zarr_format=3)
+zarr_with_v3_metadata = zarr.open({}, zarr_format=3)
 ```
 
 Once you are happy with the conversion, you can run the following to remove the old v2 metadata:
