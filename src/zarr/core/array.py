@@ -485,9 +485,16 @@ class AsyncArray[T_ArrayMetadata: (ArrayV2Metadata, ArrayV3Metadata)]:
                 item_size = dtype_parsed.item_size
             if _raw_chunks is None:
                 outer_chunks = guess_chunks(shape, item_size)
+                chunk_grid = create_chunk_grid_metadata(outer_chunks)
             else:
                 outer_chunks = normalize_chunks_nd(_raw_chunks, shape)
-            chunk_grid = create_chunk_grid_metadata(outer_chunks)
+                # A nested-sequence chunk spec is an explicit rectilinear
+                # request: honor it even when the edges happen to be
+                # uniform (issue #4272, restores 3.2.x behavior).
+                chunk_grid = create_chunk_grid_metadata(
+                    outer_chunks,
+                    requested_rectilinear=_is_rectilinear_chunks(_raw_chunks),
+                )
             result = await cls._create_v3(
                 store_path,
                 shape=shape,
@@ -4531,7 +4538,22 @@ async def init_array(
             dtype=zdtype,
         )
         sub_codecs = cast("tuple[Codec, ...]", (*array_array, array_bytes, *bytes_bytes))
-        grid = create_chunk_grid_metadata(outer_chunks)
+        # A nested-sequence chunks/shards spec is an explicit rectilinear
+        # request for the chunk grid: honor it even when the edges happen to
+        # be uniform (issue #4272, restores 3.2.x behavior). Note the grid
+        # metadata describes the OUTER layout, so rectilinear *shards* make
+        # the grid rectilinear even when `chunks=` itself is flat.
+        # "auto" / flat specs infer the kind from the edge values.
+        if _is_rectilinear_chunks(shards):
+            requested_rectilinear_grid: bool | None = True
+        elif chunks == "auto":
+            requested_rectilinear_grid = None
+        else:
+            requested_rectilinear_grid = _is_rectilinear_chunks(chunks)
+        grid = create_chunk_grid_metadata(
+            outer_chunks,
+            requested_rectilinear=requested_rectilinear_grid,
+        )
         codecs_out: tuple[Codec, ...]
         if inner is not None:
             inner_chunks_flat = as_regular_shape(inner.outer_chunks)
