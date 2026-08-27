@@ -42,7 +42,7 @@ print(z.info)
 
 Here, we created a 2D array of shape `(100, 100)`, chunked into blocks of
 `(10, 10)`, and filled it with random floating-point data. This array was
-written to a `LocalStore` in the `data/example-1.zarr` directory.
+written to the in-memory store `memory://quickstart-scale-demo`.
 
 ### Compression and Filters
 

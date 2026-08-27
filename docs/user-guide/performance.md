@@ -324,7 +324,7 @@ E.g., pickle/unpickle a local store array:
 ```python exec="true" session="performance" source="above" result="ansi"
 import pickle
 data = np.arange(100000)
-z1 = zarr.create_array(store={}, shape=data.shape, chunks=data.shape, dtype=data.dtype)
+z1 = zarr.create_array(store='data/perf-example-2.zarr', shape=data.shape, chunks=data.shape, dtype=data.dtype)
 z1[:] = data
 s = pickle.dumps(z1)
 z2 = pickle.loads(s)
