@@ -101,7 +101,6 @@ from zarr.core.indexing import (
     Selection,
     VIndex,
     _iter_grid,
-    _iter_regions,
     check_fields,
     check_no_multi_fields,
     is_pure_fancy_indexing,
@@ -126,6 +125,7 @@ from zarr.core.metadata.v2 import (
 )
 from zarr.core.metadata.v3 import (
     ChunkGridMetadata,
+    RegularChunkGridMetadata,
     create_chunk_grid_metadata,
     parse_node_type_array,
 )
@@ -4814,13 +4814,24 @@ def _parse_keep_array_attr(
     dict[str, JSON] | None,
 ]:
     if isinstance(data, Array):
+        # ``ChunkGrid.from_metadata`` represents rectilinear dimensions with
+        # uniform edges as ``FixedDimension``. Consequently,
+        # ``data._chunk_grid.is_regular`` does not preserve the grid kind
+        # recorded in v3 metadata, which is what ``chunks='keep'`` must copy.
+        if isinstance(data.metadata, ArrayV3Metadata):
+            metadata_has_regular_grid = isinstance(
+                data.metadata.chunk_grid, RegularChunkGridMetadata
+            )
+        else:
+            # Zarr format 2 always has a regular chunk grid.
+            metadata_has_regular_grid = True
         if chunks == "keep":
-            if data._chunk_grid.is_regular:
+            if metadata_has_regular_grid:
                 chunks = data.chunks
             else:
                 chunks = data.write_chunk_sizes
         if shards == "keep":
-            shards = data.shards if data._chunk_grid.is_regular else None
+            shards = data.shards if metadata_has_regular_grid else None
         if zarr_format is None:
             zarr_format = data.metadata.zarr_format
         if filters == "keep":
@@ -5293,13 +5304,12 @@ def _iter_shard_regions(
         A tuple of slice objects representing the region spanned by each shard in the selection or chunk
         when no shards are present.
     """
-    if array.shards is None:
-        shard_shape = array.chunks
-    else:
-        shard_shape = array.shards
-
-    return _iter_regions(
-        array.shape, shard_shape, origin=origin, selection_shape=selection_shape, trim_excess=True
+    # The array's metadata grid describes the outer storage layout in both
+    # sharded and non-sharded arrays. Using it directly supports rectilinear
+    # grids, for which ``chunks`` and ``shards`` are intentionally undefined.
+    return array._chunk_grid.iter_chunk_regions(
+        origin=origin,
+        selection_shape=selection_shape,
     )
 
 
